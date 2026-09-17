@@ -27,7 +27,9 @@ type CandlePayload = {
   error?: string;
 };
 
-const POLL_MS = 5_000;
+const ORACLE_POLL_MS = 2_000;
+const CANDLE_REFRESH_MS = 15_000;
+const WINDOW_CANDLES = 30;
 const SVG_NS = "http://www.w3.org/2000/svg";
 
 function setReactNumberInput(labelNeedle: string, value: number) {
@@ -101,12 +103,12 @@ function updateVisibleTicker(payload: OraclePayload) {
   const chartStatus = document.querySelector(".chart p");
   if (chartStatus) {
     const sources = Number(payload.sourceCount ?? 0);
-    chartStatus.textContent = `LIVE BTC/USD • ${sources}/3 ORACLE SOURCES • 1M CANDLES`;
+    chartStatus.textContent = `LIVE BTC/USD • ${sources}/3 ORACLE SOURCES • 1M CANDLES • 2S TICK`;
   }
 
   const chartSmall = document.querySelector(".chart small");
   if (chartSmall) {
-    chartSmall.textContent = `Updated ${new Date().toLocaleTimeString()} • Coinbase candles + quorum index`;
+    chartSmall.textContent = `Live tick ${new Date().toLocaleTimeString()} • active candle updates every ~2s`;
   }
 
   setReactNumberInput("MARK PRICE", price);
@@ -121,6 +123,35 @@ function updateVisibleTicker(payload: OraclePayload) {
 
 function svgEl<K extends keyof SVGElementTagNameMap>(name: K) {
   return document.createElementNS(SVG_NS, name);
+}
+
+function buildLiveCandles(rawCandles: Candle[], livePrice: number, nowMs: number) {
+  const candles = rawCandles
+    .map((candle) => ({ ...candle }))
+    .sort((a, b) => a.time - b.time);
+
+  if (candles.length === 0) return candles;
+
+  const currentMinute = Math.floor(nowMs / 60_000) * 60;
+  const last = candles[candles.length - 1]!;
+
+  if (last.time < currentMinute) {
+    const open = last.close;
+    candles.push({
+      time: currentMinute,
+      open,
+      high: Math.max(open, livePrice),
+      low: Math.min(open, livePrice),
+      close: livePrice,
+      volume: 0,
+    });
+  } else {
+    last.close = livePrice;
+    last.high = Math.max(last.high, livePrice);
+    last.low = Math.min(last.low, livePrice);
+  }
+
+  return candles.slice(-WINDOW_CANDLES);
 }
 
 function renderCandles(rawCandles: Candle[], livePrice: number) {
@@ -143,16 +174,11 @@ function renderCandles(rawCandles: Candle[], livePrice: number) {
     chart.prepend(svg);
   }
 
-  const candles = rawCandles.slice(-72).map((candle) => ({ ...candle }));
-  const last = candles[candles.length - 1]!;
-  last.close = livePrice;
-  last.high = Math.max(last.high, livePrice);
-  last.low = Math.min(last.low, livePrice);
-
+  const candles = buildLiveCandles(rawCandles, livePrice, Date.now());
   const minPrice = Math.min(...candles.map((candle) => candle.low));
   const maxPrice = Math.max(...candles.map((candle) => candle.high));
   const rawRange = Math.max(maxPrice - minPrice, 1);
-  const pad = rawRange * 0.08;
+  const pad = Math.max(rawRange * 0.08, livePrice * 0.00035);
   const lo = minPrice - pad;
   const hi = maxPrice + pad;
   const range = hi - lo;
@@ -162,7 +188,7 @@ function renderCandles(rawCandles: Candle[], livePrice: number) {
   const bottom = 298;
   const plotHeight = bottom - top;
   const step = width / candles.length;
-  const bodyWidth = Math.max(2.5, step * 0.58);
+  const bodyWidth = Math.max(5, step * 0.58);
   const y = (price: number) => top + ((hi - price) / range) * plotHeight;
 
   svg.replaceChildren();
@@ -181,6 +207,7 @@ function renderCandles(rawCandles: Candle[], livePrice: number) {
 
   candles.forEach((candle, index) => {
     const x = index * step + step / 2;
+    const isLive = index === candles.length - 1;
     const up = candle.close >= candle.open;
     const color = up ? "#e8ff47" : "#ff6161";
 
@@ -190,8 +217,8 @@ function renderCandles(rawCandles: Candle[], livePrice: number) {
     wick.setAttribute("y1", String(y(candle.high)));
     wick.setAttribute("y2", String(y(candle.low)));
     wick.setAttribute("stroke", color);
-    wick.setAttribute("stroke-width", index === candles.length - 1 ? "2" : "1.15");
-    wick.setAttribute("opacity", index === candles.length - 1 ? "1" : ".82");
+    wick.setAttribute("stroke-width", isLive ? "2.5" : "1.25");
+    wick.setAttribute("opacity", isLive ? "1" : ".82");
     svg!.append(wick);
 
     const openY = y(candle.open);
@@ -200,10 +227,23 @@ function renderCandles(rawCandles: Candle[], livePrice: number) {
     body.setAttribute("x", String(x - bodyWidth / 2));
     body.setAttribute("y", String(Math.min(openY, closeY)));
     body.setAttribute("width", String(bodyWidth));
-    body.setAttribute("height", String(Math.max(2, Math.abs(openY - closeY))));
+    body.setAttribute("height", String(Math.max(isLive ? 3 : 2, Math.abs(openY - closeY))));
     body.setAttribute("fill", color);
-    body.setAttribute("opacity", index === candles.length - 1 ? "1" : ".78");
+    body.setAttribute("opacity", isLive ? "1" : ".78");
     svg!.append(body);
+
+    if (isLive) {
+      const halo = svgEl("rect");
+      halo.setAttribute("x", String(x - bodyWidth / 2 - 3));
+      halo.setAttribute("y", String(Math.min(openY, closeY) - 3));
+      halo.setAttribute("width", String(bodyWidth + 6));
+      halo.setAttribute("height", String(Math.max(9, Math.abs(openY - closeY) + 6)));
+      halo.setAttribute("fill", "none");
+      halo.setAttribute("stroke", color);
+      halo.setAttribute("stroke-width", "1");
+      halo.setAttribute("opacity", ".55");
+      svg!.append(halo);
+    }
   });
 
   const priceY = y(livePrice);
@@ -213,9 +253,9 @@ function renderCandles(rawCandles: Candle[], livePrice: number) {
   priceLine.setAttribute("y1", String(priceY));
   priceLine.setAttribute("y2", String(priceY));
   priceLine.setAttribute("stroke", "#e8ff47");
-  priceLine.setAttribute("stroke-width", "1");
+  priceLine.setAttribute("stroke-width", "1.2");
   priceLine.setAttribute("stroke-dasharray", "7 7");
-  priceLine.setAttribute("opacity", ".55");
+  priceLine.setAttribute("opacity", ".7");
   svg.append(priceLine);
 }
 
@@ -226,33 +266,47 @@ export function LiveBtcOracleBridge() {
     if (pathname !== "/trade") return;
 
     let cancelled = false;
-    let controller: AbortController | undefined;
+    let oracleController: AbortController | undefined;
+    let candleController: AbortController | undefined;
+    let cachedCandles: Candle[] = [];
+    let lastCandleFetch = 0;
 
-    async function refresh() {
-      controller?.abort();
-      controller = new AbortController();
+    async function refreshCandles(force = false) {
+      const now = Date.now();
+      if (!force && cachedCandles.length > 1 && now - lastCandleFetch < CANDLE_REFRESH_MS) return;
+
+      candleController?.abort();
+      candleController = new AbortController();
+      const response = await fetch(`/api/market/btc-usd/candles?t=${now}`, {
+        cache: "no-store",
+        signal: candleController.signal,
+        headers: { Accept: "application/json" },
+      });
+      const payload = await response.json() as CandlePayload;
+      if (!cancelled && response.ok && Array.isArray(payload.candles)) {
+        cachedCandles = payload.candles;
+        lastCandleFetch = now;
+      }
+    }
+
+    async function refreshTick() {
+      oracleController?.abort();
+      oracleController = new AbortController();
+
       try {
-        const [oracleResponse, candleResponse] = await Promise.all([
-          fetch(`/api/oracle/btc-usd?t=${Date.now()}`, {
-            cache: "no-store",
-            signal: controller.signal,
-            headers: { Accept: "application/json" },
-          }),
-          fetch(`/api/market/btc-usd/candles?t=${Date.now()}`, {
-            cache: "no-store",
-            signal: controller.signal,
-            headers: { Accept: "application/json" },
-          }),
-        ]);
+        await refreshCandles(cachedCandles.length === 0);
+        const response = await fetch(`/api/oracle/btc-usd?t=${Date.now()}`, {
+          cache: "no-store",
+          signal: oracleController.signal,
+          headers: { Accept: "application/json" },
+        });
+        const oracle = await response.json() as OraclePayload;
+        if (cancelled || !response.ok) return;
 
-        const oracle = await oracleResponse.json() as OraclePayload;
-        const candlePayload = await candleResponse.json() as CandlePayload;
-        if (cancelled) return;
-
-        if (oracleResponse.ok) updateVisibleTicker(oracle);
+        updateVisibleTicker(oracle);
         const livePrice = Number(oracle.price);
-        if (oracleResponse.ok && candleResponse.ok && Array.isArray(candlePayload.candles)) {
-          renderCandles(candlePayload.candles, livePrice);
+        if (cachedCandles.length > 1 && Number.isFinite(livePrice) && livePrice > 0) {
+          renderCandles(cachedCandles, livePrice);
         }
       } catch (error) {
         if (!cancelled && !(error instanceof DOMException && error.name === "AbortError")) {
@@ -261,11 +315,12 @@ export function LiveBtcOracleBridge() {
       }
     }
 
-    void refresh();
-    const timer = window.setInterval(() => void refresh(), POLL_MS);
+    void refreshTick();
+    const timer = window.setInterval(() => void refreshTick(), ORACLE_POLL_MS);
     return () => {
       cancelled = true;
-      controller?.abort();
+      oracleController?.abort();
+      candleController?.abort();
       window.clearInterval(timer);
     };
   }, [pathname]);
