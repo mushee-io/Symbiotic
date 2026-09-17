@@ -18,6 +18,7 @@
     "mm:run": "tsx scripts/run-mm.ts",
     "mm:status": "tsx scripts/mm-status.ts",
     "mm:close": "tsx scripts/mm-close.ts",
+    "mm:recover": "tsx scripts/recover-partial-mm.ts",
     "start": "tsx src/mm.ts",
     "typecheck": "tsc --noEmit"
   },
