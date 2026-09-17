@@ -281,6 +281,11 @@ export class PreprodMmExecutionAdapter {
     return { utxos, spendable, protectedRefs, susd, lovelace };
   }
 
+  private async livePerpetualUtxos() {
+    return (await this.provider.fetchAddressUTxOs(this.perpetual.scriptAddress))
+      .filter((utxo) => quantityOf(utxo, this.susdUnit) > 0n && Boolean(utxo.output.plutusData));
+  }
+
   async openQuotePair(input: { quote: TwoSidedQuote; oracle: OracleRound; risk: MmExecutionRisk; pairId?: string }) {
     const existing = this.readState();
     if (existing?.status === "open") throw new Error(`MM already has an open managed pair: ${existing.pairId}`);
@@ -399,17 +404,17 @@ export class PreprodMmExecutionAdapter {
 
   private async closeLeg(leg: MmExecutionLeg) {
     if (leg.closedTxHash) return leg.closedTxHash;
-    const live = await this.provider.fetchUTxOs(leg.txHash, leg.outputIndex);
-    const position = live.find((utxo) => utxo.input.outputIndex === leg.outputIndex);
-    if (!position) throw new Error(`Managed position is no longer unspent: ${leg.positionUtxo}`);
+
+    const livePositions = await this.livePerpetualUtxos();
+    const position = livePositions.find((utxo) => utxoRef(utxo) === leg.positionUtxo);
+    if (!position) {
+      throw new Error(`Managed position is not in the current unspent perpetual set: ${leg.positionUtxo}`);
+    }
     if (position.output.address !== this.perpetual.scriptAddress || quantityOf(position, this.susdUnit) <= 0n || !position.output.plutusData) {
       throw new Error(`Managed position no longer matches the deployed Perpetual validator: ${leg.positionUtxo}`);
     }
 
     const collateral = await this.ensureCollateralUtxo();
-    const snapshot = await this.walletSnapshot();
-    const spendable = snapshot.spendable.filter((utxo) => utxoRef(utxo) !== utxoRef(collateral));
-    if (!spendable.length) throw new Error("No wallet UTxO remains for fees after reserving Plutus collateral");
 
     const unsignedTx = await new MeshTxBuilder({ fetcher: this.provider, submitter: this.provider, evaluator: this.provider })
       .spendingPlutusScriptV3()
@@ -420,9 +425,8 @@ export class PreprodMmExecutionAdapter {
       .requiredSignerHash(this.mmKeyHash)
       .txInCollateral(collateral.input.txHash, collateral.input.outputIndex, collateral.output.amount, collateral.output.address)
       .changeAddress(this.mmAddress)
-      .selectUtxosFrom(spendable)
       .complete();
-    const signedTx = await this.wallet.signTx(unsignedTx);
+    const signedTx = await this.wallet.signTx(unsignedTx, true);
     const txHash = await this.wallet.submitTx(signedTx);
     await waitForTransactionOutputs(this.provider, txHash);
     return txHash;
@@ -452,14 +456,23 @@ export class PreprodMmExecutionAdapter {
   async reconcileState() {
     const state = this.readState();
     if (!state) return { state: undefined, liveLegs: 0 };
-    let liveLegs = 0;
-    for (const leg of state.legs) {
-      if (leg.closedTxHash) continue;
-      const utxos = await this.provider.fetchUTxOs(leg.txHash, leg.outputIndex);
-      if (utxos.some((utxo) => utxo.input.outputIndex === leg.outputIndex && utxo.output.address === this.perpetual.scriptAddress)) liveLegs += 1;
+
+    const livePositions = await this.livePerpetualUtxos();
+    const liveRefs = new Set(livePositions.map(utxoRef));
+    const expectedOpenLegs = state.legs.filter((leg) => !leg.closedTxHash);
+    const unexpectedlyLiveClosed = state.legs.filter((leg) => leg.closedTxHash && liveRefs.has(leg.positionUtxo));
+    if (unexpectedlyLiveClosed.length) {
+      throw new Error(`MM state/chain divergence: ${unexpectedlyLiveClosed.length} leg(s) are marked closed locally but remain unspent on-chain`);
     }
-    if (state.status === "open" && liveLegs !== state.legs.length) {
-      throw new Error(`MM state/chain divergence: local state expects ${state.legs.length} open legs, chain exposes ${liveLegs}`);
+
+    const missingOpen = expectedOpenLegs.filter((leg) => !liveRefs.has(leg.positionUtxo));
+    if (state.status === "open" && missingOpen.length) {
+      throw new Error(`MM state/chain divergence: ${missingOpen.length} locally-open leg(s) are no longer unspent on-chain`);
+    }
+
+    const liveLegs = expectedOpenLegs.filter((leg) => liveRefs.has(leg.positionUtxo)).length;
+    if (state.status === "closed" && liveLegs !== 0) {
+      throw new Error(`MM state/chain divergence: closed pair still exposes ${liveLegs} live leg(s)`);
     }
     return { state, liveLegs };
   }
