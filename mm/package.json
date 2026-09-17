@@ -19,5 +19,9 @@
     "@types/node": "22.18.6",
     "tsx": "4.20.6",
     "typescript": "5.9.2"
+  },
+  "overrides": {
+    "ip-address": "10.7.0",
+    "undici": "6.28.0"
   }
 }
