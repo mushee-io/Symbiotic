@@ -10,8 +10,7 @@ const mmRoot = process.cwd();
 const repoRoot = resolve(mmRoot, "..");
 const aiken = ensurePinnedAiken();
 console.log(`Using ${aiken.version}`);
-const binary = aiken.shim;
-const build = spawnSync(binary, ["build"], { cwd: repoRoot, stdio: "inherit", shell: process.platform === "win32" });
+const build = spawnSync(aiken.aikenPath, ["build"], { cwd: repoRoot, stdio: "inherit", shell: false });
 if (build.error) throw build.error;
 if (build.status !== 0) throw new Error(`aiken build failed: ${build.status}`);
 

@@ -167,7 +167,9 @@ function repoPaths() {
 }
 
 function runPinnedAikenBuild(repoRoot: string, mmRoot: string) {
-  const binary = resolve(mmRoot, "node_modules", ".bin", process.platform === "win32" ? "aiken.cmd" : "aiken");
+  const resolvedBinary = process.env.SYMBIOTIC_AIKEN_BIN;
+  const fallbackBinary = resolve(mmRoot, "node_modules", ".bin", process.platform === "win32" ? "aiken.cmd" : "aiken");
+  const binary = resolvedBinary || fallbackBinary;
   if (!existsSync(binary)) {
     throw new Error(`Pinned Aiken binary missing at ${binary}; install Aiken v1.1.22 and run through deploy:plan/deploy:validators`);
   }
@@ -175,7 +177,7 @@ function runPinnedAikenBuild(repoRoot: string, mmRoot: string) {
   const result = spawnSync(binary, ["build"], {
     cwd: repoRoot,
     stdio: "inherit",
-    shell: process.platform === "win32",
+    shell: false,
   });
   if (result.error) throw result.error;
   if (result.status !== 0) throw new Error(`aiken build failed with exit code ${result.status}`);
