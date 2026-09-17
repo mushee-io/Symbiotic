@@ -1,21 +1,20 @@
-import { BlockfrostProvider } from "@meshsdk/core";
-import { AddressType, MeshCardanoHeadlessWallet } from "@meshsdk/wallet";
+import { BlockfrostProvider, MeshWallet } from "@meshsdk/core";
 import { config } from "./config.js";
 import { buildTwoSidedQuote } from "./quote-engine.js";
 
 const provider = new BlockfrostProvider(config.blockfrostProjectId);
-const wallet = await MeshCardanoHeadlessWallet.fromMnemonic({
+const wallet = new MeshWallet({
   networkId: config.networkId,
-  walletAddressType: AddressType.Enterprise,
   fetcher: provider,
   submitter: provider,
-  mnemonic: config.mnemonic.split(/\s+/),
+  key: { type: "mnemonic", words: config.mnemonic.split(/\s+/) },
 });
+await wallet.init();
 
-const address = await wallet.getChangeAddressBech32();
+const address = await wallet.getChangeAddress();
 if (!address.startsWith("addr_test1")) throw new Error("Symbiotic-MM is not on Cardano testnet");
 
-const utxos = await wallet.getUtxosMesh();
+const utxos = await wallet.getUtxos();
 if (!utxos.length) throw new Error("Symbiotic-MM wallet is unfunded");
 
 console.log(JSON.stringify({
