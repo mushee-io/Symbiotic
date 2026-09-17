@@ -1,5 +1,8 @@
-import { buildDeploymentPlan, deployValidators } from "../src/preprod-deployment.js";
+import { ensurePinnedAiken } from "./ensure-aiken.js";
 
+const aiken = ensurePinnedAiken();
+console.log(`Using ${aiken.version}`);
+const { buildDeploymentPlan, deployValidators } = await import("../src/preprod-deployment.js");
 const { plan, wallet, provider } = await buildDeploymentPlan();
 console.log(`Verified deployment plan ${plan.planRoot}`);
 console.log(`Deploying ${plan.validators.length} Plutus V3 reference scripts to Cardano Preprod...`);
