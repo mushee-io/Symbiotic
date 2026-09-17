@@ -21,6 +21,7 @@ const REFERENCE_SAFETY_DENOMINATOR = 100n;
 const REFERENCE_OVERHEAD_BYTES = 320n;
 const MIN_REFERENCE_LOVELACE = 5_000_000n;
 const FEE_BUFFER_LOVELACE = 5_000_000n;
+const MIN_MM_SUSD_WHOLE = 10_000n;
 
 const validatorTitles = {
   collateral: "collateral.collateral.spend",
@@ -299,10 +300,21 @@ export async function buildDeploymentPlan(): Promise<{ plan: DeploymentPlan; wal
 
   const balance = (await wallet.getBalance()) as Array<{ unit: string; quantity: string }>;
   const observedSusd = quantityOf(balance, canonicalAsset.assetUnit);
-  const requiredSusd = BigInt(canonicalAsset.baseUnits);
-  if (observedSusd !== requiredSusd) {
+  const canonicalSupply = BigInt(canonicalAsset.baseUnits);
+  const minimumOperationalSusd = MIN_MM_SUSD_WHOLE * (10n ** BigInt(canonicalAsset.decimals));
+  if (observedSusd < minimumOperationalSusd) {
     throw new Error(
-      `Canonical sUSD supply check failed in MM wallet: expected ${requiredSusd}, observed ${observedSusd}. Refusing validator deployment.`,
+      `Insufficient canonical sUSD in MM wallet: need at least ${minimumOperationalSusd}, observed ${observedSusd}. Refusing validator deployment.`,
+    );
+  }
+  if (observedSusd > canonicalSupply) {
+    throw new Error(
+      `Canonical sUSD invariant failed: MM wallet holds ${observedSusd}, above recorded total supply ${canonicalSupply}. Refusing validator deployment.`,
+    );
+  }
+  if (observedSusd !== canonicalSupply) {
+    console.warn(
+      `Canonical sUSD is distributed across Preprod: MM wallet holds ${observedSusd}/${canonicalSupply} base units. Continuing because the MM operational floor is satisfied.`,
     );
   }
   const lovelace = quantityOf(balance, "lovelace");
