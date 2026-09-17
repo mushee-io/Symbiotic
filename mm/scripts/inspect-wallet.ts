@@ -1,19 +1,18 @@
-import { BlockfrostProvider } from "@meshsdk/core";
-import { AddressType, MeshCardanoHeadlessWallet } from "@meshsdk/wallet";
+import { BlockfrostProvider, MeshWallet } from "@meshsdk/core";
 import { config } from "../src/config.js";
 
 const provider = new BlockfrostProvider(config.blockfrostProjectId);
-const wallet = await MeshCardanoHeadlessWallet.fromMnemonic({
+const wallet = new MeshWallet({
   networkId: config.networkId,
-  walletAddressType: AddressType.Enterprise,
   fetcher: provider,
   submitter: provider,
-  mnemonic: config.mnemonic.split(/\s+/),
+  key: { type: "mnemonic", words: config.mnemonic.split(/\s+/) },
 });
+await wallet.init();
 
-const address = await wallet.getChangeAddressBech32();
+const address = await wallet.getChangeAddress();
 if (!address.startsWith("addr_test1")) throw new Error("MM wallet is not a Cardano testnet address");
-const utxos = await wallet.getUtxosMesh();
-const balance = await wallet.getBalanceMesh();
+const utxos = await wallet.getUtxos();
+const balance = await wallet.getBalance();
 
 console.log(JSON.stringify({ network: config.network, address, utxoCount: utxos.length, balance }, null, 2));
