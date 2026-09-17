@@ -4,10 +4,18 @@ on:
   push:
     paths:
       - "mm/**"
+      - "validators/**"
+      - "lib/**"
+      - "aiken.toml"
+      - "aiken.lock"
       - ".github/workflows/mm-ci.yml"
   pull_request:
     paths:
       - "mm/**"
+      - "validators/**"
+      - "lib/**"
+      - "aiken.toml"
+      - "aiken.lock"
       - ".github/workflows/mm-ci.yml"
 
 jobs:
@@ -21,6 +29,13 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
+      - name: Install pinned Aiken
+        working-directory: .
+        run: |
+          curl --proto '=https' --tlsv1.2 -LsSf https://github.com/aiken-lang/aiken/releases/download/v1.1.22/aiken-installer.sh | sh
+          echo "$HOME/.aiken/bin" >> "$GITHUB_PATH"
       - run: npm install
       - run: npm audit --audit-level=high
       - run: npm run typecheck
+      - name: Verify exact five-validator Aiken parameterization
+        run: npm run deploy:static-check
