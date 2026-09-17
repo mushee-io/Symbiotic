@@ -6,12 +6,12 @@ import {
   BlockfrostProvider,
   MeshTxBuilder,
   MeshWallet,
+  applyParamsToScript,
   deserializeAddress,
   resolveScriptHash,
   serializePlutusScript,
   type UTxO,
 } from "@meshsdk/core";
-import { applyParamsToScript } from "@meshsdk/core-csl";
 import { config } from "./config.js";
 
 const EXPECTED_BLUEPRINT_SHA256 = "bdb8eea4d9159c9026a66479f6389d5cad4fddf55f32957222855652b05e2855";
@@ -169,7 +169,7 @@ function repoPaths() {
 function runPinnedAikenBuild(repoRoot: string, mmRoot: string) {
   const binary = resolve(mmRoot, "node_modules", ".bin", process.platform === "win32" ? "aiken.cmd" : "aiken");
   if (!existsSync(binary)) {
-    throw new Error(`Pinned Aiken binary missing at ${binary}; run npm install in mm first`);
+    throw new Error(`Pinned Aiken binary missing at ${binary}; install Aiken v1.1.22 and run through deploy:plan/deploy:validators`);
   }
   console.log(`Building validator blueprint with pinned Aiken ${EXPECTED_AIKEN_VERSION}...`);
   const result = spawnSync(binary, ["build"], {
