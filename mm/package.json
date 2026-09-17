@@ -7,6 +7,7 @@
     "wallet:generate": "tsx scripts/generate-wallet.ts",
     "wallet:inspect": "tsx scripts/inspect-wallet.ts",
     "mint:susd": "tsx scripts/mint-susd.ts",
+    "deploy:static-check": "tsx scripts/deploy-static-check.ts",
     "deploy:plan": "tsx scripts/deploy-plan.ts",
     "deploy:validators": "tsx scripts/deploy-validators.ts",
     "start": "tsx src/mm.ts",
