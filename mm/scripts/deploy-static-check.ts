@@ -2,8 +2,7 @@ import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { resolveScriptHash, serializePlutusScript } from "@meshsdk/core";
-import { applyParamsToScript } from "@meshsdk/core-csl";
+import { applyParamsToScript, resolveScriptHash, serializePlutusScript } from "@meshsdk/core";
 import { ensurePinnedAiken } from "./ensure-aiken.js";
 
 const EXPECTED_BLUEPRINT_SHA256 = "bdb8eea4d9159c9026a66479f6389d5cad4fddf55f32957222855652b05e2855";
