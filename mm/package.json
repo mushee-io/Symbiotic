@@ -1,6 +1,6 @@
 {
   "name": "symbiotic-mm",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "private": true,
   "type": "module",
   "scripts": {
@@ -10,6 +10,7 @@
     "deploy:static-check": "tsx scripts/deploy-static-check.ts",
     "deploy:plan": "tsx scripts/deploy-plan.ts",
     "deploy:validators": "tsx scripts/deploy-validators.ts",
+    "oracle:once": "tsx scripts/oracle-once.ts",
     "start": "tsx src/mm.ts",
     "typecheck": "tsc --noEmit"
   },

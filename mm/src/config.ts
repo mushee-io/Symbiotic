@@ -22,6 +22,9 @@ export const config = {
   market: process.env.BTC_USD_SYMBOL ?? "BTC-USD",
   spreadBps: Number(process.env.MM_SPREAD_BPS ?? "10"),
   quoteNotionalUsd: Number(process.env.MM_QUOTE_NOTIONAL_USD ?? "1000"),
+  oracleMinSources: Number(process.env.ORACLE_MIN_SOURCES ?? "2"),
+  oracleMaxDeviationBps: Number(process.env.ORACLE_MAX_DEVIATION_BPS ?? "75"),
+  oracleTimeoutMs: Number(process.env.ORACLE_TIMEOUT_MS ?? "4000"),
 };
 
 if (config.network !== "preprod") throw new Error("Symbiotic-MM is pinned to Cardano Preprod");
@@ -33,3 +36,12 @@ if (!Number.isInteger(config.susdDecimals) || config.susdDecimals < 0 || config.
 if (config.susdInitialSupply <= 0n) throw new Error("Invalid sUSD supply");
 if (!Number.isFinite(config.spreadBps) || config.spreadBps <= 0 || config.spreadBps > 500) throw new Error("Invalid MM spread");
 if (!Number.isFinite(config.quoteNotionalUsd) || config.quoteNotionalUsd <= 0) throw new Error("Invalid quote notional");
+if (!Number.isInteger(config.oracleMinSources) || config.oracleMinSources < 2 || config.oracleMinSources > 3) {
+  throw new Error("ORACLE_MIN_SOURCES must be 2 or 3");
+}
+if (!Number.isFinite(config.oracleMaxDeviationBps) || config.oracleMaxDeviationBps <= 0 || config.oracleMaxDeviationBps > 500) {
+  throw new Error("ORACLE_MAX_DEVIATION_BPS must be > 0 and <= 500");
+}
+if (!Number.isInteger(config.oracleTimeoutMs) || config.oracleTimeoutMs < 500 || config.oracleTimeoutMs > 30_000) {
+  throw new Error("ORACLE_TIMEOUT_MS must be between 500 and 30000");
+}

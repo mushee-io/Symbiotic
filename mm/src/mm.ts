@@ -1,5 +1,6 @@
-import { BlockfrostProvider, MeshWallet } from "@meshsdk/core";
+import { BlockfrostProvider, MeshWallet, deserializeAddress } from "@meshsdk/core";
 import { config } from "./config.js";
+import { fetchBtcUsdOracleRound } from "./oracle.js";
 import { buildTwoSidedQuote } from "./quote-engine.js";
 
 const provider = new BlockfrostProvider(config.blockfrostProjectId);
@@ -13,28 +14,36 @@ await wallet.init();
 
 const address = await wallet.getChangeAddress();
 if (!address.startsWith("addr_test1")) throw new Error("Symbiotic-MM is not on Cardano testnet");
+const authorityKeyHash = deserializeAddress(address).pubKeyHash;
+if (!authorityKeyHash) throw new Error("Unable to derive MM/oracle payment key hash");
 
 const utxos = await wallet.getUtxos();
 if (!utxos.length) throw new Error("Symbiotic-MM wallet is unfunded");
+
+const oracle = await fetchBtcUsdOracleRound({
+  minSources: config.oracleMinSources,
+  maxDeviationBps: config.oracleMaxDeviationBps,
+  timeoutMs: config.oracleTimeoutMs,
+});
+
+const quote = buildTwoSidedQuote({
+  market: config.market,
+  indexPrice: oracle.price,
+  spreadBps: config.spreadBps,
+  notionalUsd: config.quoteNotionalUsd,
+});
 
 console.log(JSON.stringify({
   service: "Symbiotic-MM",
   network: config.network,
   market: config.market,
   address,
+  oracleAuthority: authorityKeyHash,
   utxoCount: utxos.length,
   deployerAddress: config.deployerAddress,
-  mode: "PREPROD_BOOTSTRAP",
+  mode: "PREPROD_LIVE_ORACLE",
+  oracle,
+  quote,
 }, null, 2));
 
-const bootstrapIndexPrice = Number(process.env.BOOTSTRAP_INDEX_PRICE ?? "60000");
-const quote = buildTwoSidedQuote({
-  market: config.market,
-  indexPrice: bootstrapIndexPrice,
-  spreadBps: config.spreadBps,
-  notionalUsd: config.quoteNotionalUsd,
-});
-
-console.log("Initial deterministic quote (not yet submitted on-chain):");
-console.log(JSON.stringify(quote, null, 2));
-console.log("Next runtime step: replace bootstrap index with signed Symbiotic oracle rounds, then submit quotes through the deployed Perpetual/Options/Notional validators.");
+console.log("Live BTC/USD oracle quorum PASS. Quote is live-market-derived but still off-chain until the execution adapter submits a protocol transaction.");
