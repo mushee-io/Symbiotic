@@ -16,6 +16,7 @@ export const PREPROD_LIVE = {
     scriptHash: "ec96a9e8107297fa37252671e8475355942b7ac8898552a2dc81abde",
     scriptAddress: "addr_test1wrkfd20gzpef073hy5n8r6z82d2eg2m6ezyc254zmjq6hhshp5t3t",
     referenceUtxo: "2f9d91e9971e845e83df270514c6ba5c552579e43de38a828ab6ebdf4af8cf76#0",
+    firstDemoPositionTx: "771fca0ed653a7ad9429af0c6f9bd79912e506b3827d7ed69e4cda7b6e775efd",
   },
 } as const;
 
