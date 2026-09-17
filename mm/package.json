@@ -15,7 +15,6 @@
   },
   "dependencies": {
     "@meshsdk/core": "1.9.1",
-    "@meshsdk/core-csl": "1.9.1",
     "dotenv": "16.6.1"
   },
   "devDependencies": {
