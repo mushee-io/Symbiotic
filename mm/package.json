@@ -1,6 +1,6 @@
 {
   "name": "symbiotic-mm",
-  "version": "0.3.2",
+  "version": "0.4.0",
   "private": true,
   "type": "module",
   "scripts": {
@@ -13,6 +13,7 @@
     "oracle:once": "tsx scripts/oracle-once.ts",
     "seed:user": "tsx scripts/seed-user-susd.ts",
     "perp:verify": "tsx scripts/verify-perp-open.ts",
+    "perp:liquidate": "tsx scripts/liquidate-perp.ts",
     "start": "tsx src/mm.ts",
     "typecheck": "tsc --noEmit"
   },
