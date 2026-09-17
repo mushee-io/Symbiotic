@@ -9,6 +9,7 @@
     "mint:susd": "tsx scripts/mint-susd.ts",
     "deploy:static-check": "tsx scripts/deploy-static-check.ts",
     "deploy:plan": "tsx scripts/deploy-plan.ts",
+    "deploy:adopt": "tsx scripts/adopt-existing-deployment.ts",
     "deploy:validators": "tsx scripts/deploy-validators.ts",
     "oracle:once": "tsx scripts/oracle-once.ts",
     "seed:user": "tsx scripts/seed-user-susd.ts",
