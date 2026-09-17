@@ -10,8 +10,8 @@ import {
   type UTxO,
 } from "@meshsdk/core";
 import { PREPROD_LIVE, priceToDatumUnits, usdToBaseUnits } from "@/lib/preprod-live";
+import type { PerpOrderType, PerpSide } from "@/lib/perps";
 
-type Side = "LONG" | "SHORT";
 type OracleRound = {
   market: "BTC-USD";
   price: number;
@@ -21,6 +21,16 @@ type OracleRound = {
   roundId: string;
 };
 
+type LivePerpLauncherProps = {
+  side: PerpSide;
+  sizeUsd: number;
+  leverage: number;
+  orderType: PerpOrderType;
+  onSideChange(side: PerpSide): void;
+  onSizeUsdChange(value: number): void;
+  onLeverageChange(value: number): void;
+};
+
 function quantity(utxos: UTxO[], unit: string) {
   return utxos.reduce((total, utxo) => {
     const found = utxo.output.amount.find((asset) => asset.unit === unit)?.quantity ?? "0";
@@ -28,23 +38,29 @@ function quantity(utxos: UTxO[], unit: string) {
   }, 0n);
 }
 
-export function LivePerpLauncher() {
-  const [side, setSide] = useState<Side>("LONG");
-  const [sizeUsd, setSizeUsd] = useState(1_000);
-  const [leverage, setLeverage] = useState(5);
+export function LivePerpLauncher({
+  side,
+  sizeUsd,
+  leverage,
+  orderType,
+  onSideChange,
+  onSizeUsdChange,
+  onLeverageChange,
+}: LivePerpLauncherProps) {
   const [status, setStatus] = useState("READY — LACE PREPROD");
   const [txHash, setTxHash] = useState("");
   const [oraclePrice, setOraclePrice] = useState<number | null>(null);
   const [busy, setBusy] = useState(false);
 
   const collateralUsd = useMemo(() => sizeUsd / leverage, [sizeUsd, leverage]);
+  const marketOrderReady = orderType === "MARKET";
 
   async function openPosition() {
-    if (busy) return;
+    if (busy || !marketOrderReady) return;
     setBusy(true);
     setTxHash("");
     try {
-      if (!Number.isFinite(sizeUsd) || sizeUsd < 10 || sizeUsd > 10_000) throw new Error("Demo notional must be $10–$10,000");
+      if (!Number.isFinite(sizeUsd) || sizeUsd < 10 || sizeUsd > 10_000) throw new Error("Live notional must be $10–$10,000");
       if (!Number.isFinite(leverage) || leverage < 1 || leverage > 20) throw new Error("Leverage must be 1–20×");
 
       setStatus("CONNECTING LACE…");
@@ -123,54 +139,51 @@ export function LivePerpLauncher() {
   }
 
   return (
-    <aside style={{
-      position: "fixed",
-      right: 18,
-      bottom: 18,
-      width: 340,
-      zIndex: 50,
-      border: "1px solid #262626",
-      background: "rgba(5,5,5,.97)",
-      boxShadow: "0 18px 60px rgba(0,0,0,.45)",
-      padding: 16,
-      fontFamily: "inherit",
-    }}>
-      <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "center" }}>
+    <div className="live-launcher">
+      <div className="live-launcher-head">
         <div>
-          <div style={{ fontSize: 9, letterSpacing: ".16em", color: "#858585" }}>LIVE CARDANO PREPROD</div>
-          <strong style={{ fontSize: 16 }}>BTC-USD PERP</strong>
+          <span className="mono-label">LIVE EXECUTION</span>
+          <strong>BTC-USD PERP</strong>
         </div>
-        <span style={{ fontSize: 9, color: "#b7ff5a" }}>sUSD COLLATERAL</span>
+        <span className="technical-badge"><i className="status-dot status-dot-live" />PREPROD</span>
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginTop: 14 }}>
-        <button type="button" onClick={() => setSide("LONG")} style={{ padding: 9, border: "1px solid #333", background: side === "LONG" ? "#f1f1f1" : "#0d0d0d", color: side === "LONG" ? "#050505" : "#aaa" }}>LONG</button>
-        <button type="button" onClick={() => setSide("SHORT")} style={{ padding: 9, border: "1px solid #333", background: side === "SHORT" ? "#f1f1f1" : "#0d0d0d", color: side === "SHORT" ? "#050505" : "#aaa" }}>SHORT</button>
+      <div className="side-switch" role="group" aria-label="Position side">
+        <button type="button" className={side === "LONG" ? "is-active" : ""} onClick={() => onSideChange("LONG")}>LONG</button>
+        <button type="button" className={side === "SHORT" ? "is-active short" : ""} onClick={() => onSideChange("SHORT")}>SHORT</button>
       </div>
 
-      <label style={{ display: "block", marginTop: 12, fontSize: 9, letterSpacing: ".12em", color: "#858585" }}>
-        NOTIONAL USD
-        <input value={sizeUsd} onChange={(event) => setSizeUsd(Number(event.target.value))} type="number" min="10" max="10000" style={{ width: "100%", marginTop: 5, padding: 9, background: "#0d0d0d", border: "1px solid #292929", color: "#f5f5f5" }} />
-      </label>
-      <label style={{ display: "block", marginTop: 10, fontSize: 9, letterSpacing: ".12em", color: "#858585" }}>
-        LEVERAGE — {leverage}×
-        <input value={leverage} onChange={(event) => setLeverage(Number(event.target.value))} type="range" min="1" max="20" style={{ width: "100%", marginTop: 8 }} />
+      <label className="trade-field">
+        <span>NOTIONAL USD</span>
+        <input value={sizeUsd} onChange={(event) => onSizeUsdChange(Number(event.target.value))} type="number" min="10" max="10000" />
       </label>
 
-      <div style={{ marginTop: 10, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, fontSize: 10 }}>
-        <span style={{ color: "#777" }}>COLLATERAL<br /><b style={{ color: "#eee" }}>{collateralUsd.toFixed(2)} sUSD</b></span>
-        <span style={{ color: "#777" }}>LIVE INDEX<br /><b style={{ color: "#eee" }}>{oraclePrice ? `$${oraclePrice.toLocaleString(undefined, { maximumFractionDigits: 2 })}` : "ON SUBMIT"}</b></span>
+      <label className="trade-field range-field">
+        <span>LEVERAGE <b>{leverage}×</b></span>
+        <input value={leverage} onChange={(event) => onLeverageChange(Number(event.target.value))} type="range" min="1" max="20" />
+      </label>
+
+      <div className="execution-summary">
+        <div><span>COLLATERAL</span><b>{collateralUsd.toFixed(2)} sUSD</b></div>
+        <div><span>LIVE INDEX</span><b>{oraclePrice ? `$${oraclePrice.toLocaleString(undefined, { maximumFractionDigits: 2 })}` : "ON SUBMIT"}</b></div>
+        <div><span>NETWORK</span><b>CARDANO PREPROD</b></div>
+        <div><span>SETTLEMENT</span><b>POSITION UTxO</b></div>
       </div>
 
-      <button type="button" disabled={busy} onClick={openPosition} style={{ width: "100%", marginTop: 14, padding: 12, border: 0, background: busy ? "#333" : "#b7ff5a", color: "#050505", fontWeight: 800, letterSpacing: ".08em", cursor: busy ? "wait" : "pointer" }}>
-        {busy ? "WORKING…" : `OPEN LIVE ${side}`}
+      {!marketOrderReady ? (
+        <div className="execution-warning">LIVE WALLET SUBMISSION IS CURRENTLY MARKET-ORDER ONLY. {orderType.replace("_", " ")} REMAINS A LOCAL VALIDATION PREVIEW.</div>
+      ) : null}
+
+      <button className="execute-button" type="button" disabled={busy || !marketOrderReady} onClick={openPosition}>
+        {busy ? "BUILDING TRANSACTION…" : marketOrderReady ? `OPEN LIVE ${side}` : "MARKET ORDER REQUIRED"}
       </button>
-      <div style={{ marginTop: 10, fontSize: 9, lineHeight: 1.5, color: status.startsWith("ERROR") ? "#ff8585" : "#8b8b8b", wordBreak: "break-word" }}>{status}</div>
+
+      <div className={status.startsWith("ERROR") ? "execution-status is-error" : "execution-status"} aria-live="polite">{status}</div>
       {txHash ? (
-        <a href={`https://preprod.cardanoscan.io/transaction/${txHash}`} target="_blank" rel="noreferrer" style={{ display: "block", marginTop: 8, fontSize: 10, color: "#b7ff5a", wordBreak: "break-all" }}>
-          {txHash}
+        <a className="tx-link" href={`https://preprod.cardanoscan.io/transaction/${txHash}`} target="_blank" rel="noreferrer">
+          VIEW TRANSACTION ↗<span>{txHash}</span>
         </a>
       ) : null}
-    </aside>
+    </div>
   );
 }
