@@ -1,19 +1,18 @@
-import { BlockfrostProvider, ForgeScript, MeshTxBuilder, resolveScriptHash, stringToHex } from "@meshsdk/core";
-import { AddressType, MeshCardanoHeadlessWallet } from "@meshsdk/wallet";
+import { BlockfrostProvider, ForgeScript, MeshTxBuilder, MeshWallet, resolveScriptHash, stringToHex } from "@meshsdk/core";
 import { config } from "../src/config.js";
 
 const provider = new BlockfrostProvider(config.blockfrostProjectId);
-const wallet = await MeshCardanoHeadlessWallet.fromMnemonic({
+const wallet = new MeshWallet({
   networkId: config.networkId,
-  walletAddressType: AddressType.Enterprise,
   fetcher: provider,
   submitter: provider,
-  mnemonic: config.mnemonic.split(/\s+/),
+  key: { type: "mnemonic", words: config.mnemonic.split(/\s+/) },
 });
+await wallet.init();
 
-const address = await wallet.getChangeAddressBech32();
+const address = await wallet.getChangeAddress();
 if (!address.startsWith("addr_test1")) throw new Error("MM wallet is not on Cardano testnet");
-const utxos = await wallet.getUtxosMesh();
+const utxos = await wallet.getUtxos();
 if (!utxos.length) throw new Error("MM wallet has no UTxOs; fund it with Preprod tADA first");
 
 const forgingScript = ForgeScript.withOneSignature(address);
