@@ -1,6 +1,6 @@
 import { spawnSync } from "node:child_process";
 import { chmodSync, mkdirSync, writeFileSync } from "node:fs";
-import { delimiter, resolve } from "node:path";
+import { resolve } from "node:path";
 
 const EXPECTED_VERSION = "1.1.22";
 
@@ -11,7 +11,7 @@ export function ensurePinnedAiken() {
     .split(/\r?\n/)
     .map((value) => value.trim())
     .filter(Boolean)
-    .filter((value) => !value.includes(`${delimiter}node_modules${delimiter}.bin${delimiter}`));
+    .filter((value) => !value.replace(/\\/g, "/").toLowerCase().includes("/node_modules/.bin/"));
   const aikenPath = candidates[0];
   if (!aikenPath) {
     const install = process.platform === "win32"
