@@ -3,6 +3,25 @@ import { PreprodMmExecutionAdapter, type MmExecutionRisk } from "./execution-ada
 import { fetchBtcUsdOracleRound } from "./oracle.js";
 import { buildTwoSidedQuote } from "./quote-engine.js";
 
+const TRANSIENT_UTXO_RETRY_MS = 5_000;
+
+function sleep(ms: number) {
+  return new Promise((resolvePromise) => setTimeout(resolvePromise, ms));
+}
+
+function errorText(error: unknown) {
+  if (error instanceof Error) return error.message;
+  try {
+    return JSON.stringify(error);
+  } catch {
+    return String(error);
+  }
+}
+
+function isTransientUtxoRace(error: unknown) {
+  return errorText(error).includes("BadInputsUTxO");
+}
+
 function riskConfig(): MmExecutionRisk {
   return {
     leverage: config.leverage,
@@ -117,13 +136,24 @@ export async function runMmForever() {
   process.once("SIGTERM", stop);
 
   while (!stopped) {
+    let transientUtxoRace = false;
     try {
       const result = await runMmCycle(adapter);
       console.log(JSON.stringify(result, null, 2));
     } catch (error) {
-      console.error(`[MM FAIL-CLOSED] ${error instanceof Error ? error.message : String(error)}`);
+      if (isTransientUtxoRace(error)) {
+        transientUtxoRace = true;
+        console.warn(`[MM RETRY] Preprod UTxO state is still catching up after the previous transaction. Refreshing oracle and wallet state in ${TRANSIENT_UTXO_RETRY_MS}ms.`);
+      } else {
+        console.error(`[MM FAIL-CLOSED] ${errorText(error)}`);
+      }
     }
-    if (!stopped) await new Promise((resolvePromise) => setTimeout(resolvePromise, config.loopIntervalMs));
+    if (stopped) break;
+    if (transientUtxoRace) {
+      await sleep(TRANSIENT_UTXO_RETRY_MS);
+      continue;
+    }
+    await sleep(config.loopIntervalMs);
   }
   console.log("Symbiotic-MM loop stopped. Existing on-chain positions were left unchanged.");
 }
