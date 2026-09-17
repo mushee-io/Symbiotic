@@ -35,7 +35,7 @@ export default function HomePage() {
           <a href="#risk">RISK</a>
           <a href="#liquidity">LIQUIDITY</a>
           <a href="#proof">PROOF</a>
-          <Link href="/status">STATUS</Link>
+          <a href="https://github.com/mushee-io/Symbiotic" target="_blank" rel="noreferrer">GITHUB</a>
         </nav>
         <div className={styles.headerActions}>
           <span className={styles.network}><i />PREPROD</span>
@@ -203,7 +203,7 @@ export default function HomePage() {
         <div className={styles.footerBrand}><span>S</span><div><b>SYMBIOTIC</b><small>CARDANO DERIVATIVES INFRASTRUCTURE</small></div></div>
         <div className={styles.footerCols}>
           <div><b>PROTOCOL</b><a href="#markets">Markets</a><a href="#risk">Risk</a><a href="#liquidity">Liquidity</a><a href="#architecture">Architecture</a></div>
-          <div><b>DEVELOPERS</b><a href="https://github.com/mushee-io/Symbiotic" target="_blank" rel="noreferrer">GitHub</a><Link href="/status">Status</Link><a href="#proof">Contracts</a></div>
+          <div><b>DEVELOPERS</b><a href="https://github.com/mushee-io/Symbiotic" target="_blank" rel="noreferrer">GitHub</a><a href="https://github.com/mushee-io/Symbiotic#readme" target="_blank" rel="noreferrer">Docs</a><a href="#proof">Contracts</a></div>
           <div><b>PRODUCT</b><Link href="/trade">Terminal</Link><a href="#proof">Explorer</a><span>Portfolio —</span></div>
         </div>
         <div className={styles.footerBottom}><span>SYMBIOTIC / CARDANO</span><span>NETWORK: PREPROD <i /></span></div>
