@@ -1,0 +1,20 @@
+{
+  "network": "preprod",
+  "networkMagic": 1,
+  "assets": {
+    "sUSD": {
+      "status": "minted",
+      "txHash": "058fc48598399499694045ae9337cc5d51bb6d28d722f9a82c5a01699603d45c",
+      "policyId": "558015db095bf61d0fd364b484ebddedf16f8d193a884a1c7b9e62f6",
+      "tokenName": "sUSD",
+      "tokenNameHex": "73555344",
+      "assetUnit": "558015db095bf61d0fd364b484ebddedf16f8d193a884a1c7b9e62f673555344",
+      "decimals": 6,
+      "wholeSupply": "1000000",
+      "baseUnits": "1000000000000",
+      "ownerAddress": "addr_test1qql2rl6wh4cnxmgah8jz3dsracxrjgr5vhfvj0uh86pjdvf4ct8ccz2hxpu6wyvdygq2szjvnkrt0pzfj46v9u9eudjsyv6986",
+      "policyControl": "single-signer demo policy",
+      "canonicalForDemo": true
+    }
+  }
+}
