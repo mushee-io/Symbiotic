@@ -19,7 +19,8 @@ function errorText(error: unknown) {
 }
 
 function isTransientUtxoRace(error: unknown) {
-  return errorText(error).includes("BadInputsUTxO");
+  const text = errorText(error).toLowerCase();
+  return text.includes("badinputsutxo") || text.includes("all inputs are spent");
 }
 
 function riskConfig(): MmExecutionRisk {
