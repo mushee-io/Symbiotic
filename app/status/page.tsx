@@ -1,5 +1,7 @@
+import Link from "next/link";
 import { deploymentManifestFromEnv } from "@/lib/deployment";
 import { evaluateReleaseGate } from "@/lib/release-gate";
+import styles from "./status.module.css";
 
 export const dynamic = "force-dynamic";
 
@@ -54,25 +56,47 @@ export default function StatusPage() {
       deepPreprodReleaseVerified: flag(process.env.SYMBIOTIC_DEEP_PREPROD_RELEASE_VERIFIED),
       dependencyAuditReviewed: flag(process.env.SYMBIOTIC_DEPENDENCY_AUDIT_REVIEWED),
       securityContactConfigured: Boolean(process.env.SYMBIOTIC_SECURITY_CONTACT?.trim()),
-      emergencyRunbookConfigured: Boolean(process.env.SYMBIOTIC_EMERGENCY_RUNBOOK_URL?.trim())
-    }
+      emergencyRunbookConfigured: Boolean(process.env.SYMBIOTIC_EMERGENCY_RUNBOOK_URL?.trim()),
+    },
   });
 
+  const readyCount = readiness.checks.filter((check) => check.ready).length;
+
   return (
-    <main style={{ minHeight: "100vh", padding: "48px", background: "#080808", color: "#f4f4ef", fontFamily: "Arial, Helvetica, sans-serif" }}>
-      <p style={{ letterSpacing: ".14em", color: "#818181", fontSize: 11 }}>SYMBIOTIC / DEEP PREPROD RELEASE GATE V7</p>
-      <h1 style={{ fontSize: 54, margin: "18px 0 10px" }}>{readiness.ready ? "RELEASE READY" : "FAIL CLOSED"}</h1>
-      <p style={{ color: "#999", maxWidth: 1080, lineHeight: 1.6 }}>V7 adds a fifth on-chain Registry validator, deployment-epoch anti-replay, stable-chain finality with rollback handling, canonical protocol state roots, oracle/funding anchoring, cross-product accounting reconciliation, and an ordered release lifecycle. The visible gate remains fail-closed until the underlying object-level evidence verifies.</p>
-      <div style={{ marginTop: 36, border: "1px solid #262626" }}>
-        {readiness.checks.map((check) => (
-          <div key={check.id} style={{ display: "grid", gridTemplateColumns: "320px 100px 1fr", gap: 20, padding: 16, borderBottom: "1px solid #262626", alignItems: "center" }}>
-            <strong>{check.id}</strong>
-            <span style={{ color: check.ready ? "#e8ff47" : "#ff6161" }}>{check.ready ? "READY" : "MISSING"}</span>
-            <span style={{ color: "#818181" }}>{check.detail}</span>
-          </div>
-        ))}
-      </div>
-      <p style={{ marginTop: 24, color: "#818181" }}>Network: {readiness.network} · Missing: {readiness.missing.length ? readiness.missing.join(", ") : "none"}</p>
+    <main className={styles.page}>
+      <header className={styles.nav}>
+        <Link className={styles.brand} href="/"><span>S</span><b>SYMBIOTIC</b></Link>
+        <nav className={styles.navLinks}><Link href="/">PROTOCOL</Link><Link href="/trade">TERMINAL</Link></nav>
+        <span className={styles.network}>CARDANO / PREPROD</span>
+      </header>
+
+      <section className={styles.hero}>
+        <div className={styles.heroCopy}>
+          <span className={styles.eyebrow}>SYMBIOTIC / RELEASE EVIDENCE GATE / V7</span>
+          <h1>{readiness.ready ? "RELEASE\nREADY" : "FAIL\nCLOSED"}</h1>
+          <p>This page is the protocol release-evidence gate. It does not measure whether the trading UI or market-maker process is currently running. A check becomes READY only when the corresponding deployment evidence or release attestation is connected to this web environment.</p>
+        </div>
+        <div className={styles.heroSide}>
+          <div className={styles.score}>{readyCount}<span> / {readiness.checks.length}</span></div>
+          <small>CONNECTED RELEASE CHECKS</small>
+          {!readiness.ready ? <div className={styles.warning}>FAIL-CLOSED IS INTENTIONAL. UNCONNECTED OR UNVERIFIED EVIDENCE IS NEVER PROMOTED TO READY.</div> : null}
+        </div>
+      </section>
+
+      <section className={styles.checks}>
+        <div className={styles.checksHead}><h2>RELEASE EVIDENCE</h2><p>NETWORK: {readiness.network.toUpperCase()}</p></div>
+        <div className={styles.table}>
+          {readiness.checks.map((check) => (
+            <div className={styles.row} key={check.id}>
+              <div className={styles.id}>{check.id}</div>
+              <div className={`${styles.status} ${check.ready ? styles.ready : styles.missing}`}>{check.ready ? "● READY" : "× NOT ATTESTED"}</div>
+              <div className={styles.detail}>{check.detail}</div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <footer className={styles.footer}><span>SYMBIOTIC / CARDANO DERIVATIVES INFRASTRUCTURE</span><span>{readiness.ready ? "RELEASE READY" : "RELEASE CERTIFICATE NOT COMPLETE"}</span></footer>
     </main>
   );
 }
