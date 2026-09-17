@@ -1,6 +1,6 @@
 {
   "name": "symbiotic-cardano-derivatives",
-  "version": "0.15.0",
+  "version": "0.16.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -13,6 +13,7 @@
     "contracts:parameters": "node scripts/export-parameter-schema.mjs plutus.json artifacts/parameter-schema.json"
   },
   "dependencies": {
+    "@meshsdk/core": "1.9.1",
     "next": "16.3.5",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
@@ -23,5 +24,9 @@
     "@types/react-dom": "^19.0.0",
     "tsx": "^4.19.0",
     "typescript": "^5.7.0"
+  },
+  "overrides": {
+    "ip-address": "10.7.0",
+    "undici": "6.28.0"
   }
 }

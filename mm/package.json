@@ -1,6 +1,6 @@
 {
   "name": "symbiotic-mm",
-  "version": "0.3.1",
+  "version": "0.3.2",
   "private": true,
   "type": "module",
   "scripts": {
@@ -12,6 +12,7 @@
     "deploy:validators": "tsx scripts/deploy-validators.ts",
     "oracle:once": "tsx scripts/oracle-once.ts",
     "seed:user": "tsx scripts/seed-user-susd.ts",
+    "perp:verify": "tsx scripts/verify-perp-open.ts",
     "start": "tsx src/mm.ts",
     "typecheck": "tsc --noEmit"
   },
