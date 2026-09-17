@@ -12,12 +12,6 @@ type Cip30Provider = {
   enable(): Promise<Cip30Api>;
 };
 
-declare global {
-  interface Window {
-    cardano?: Record<string, Cip30Provider | unknown>;
-  }
-}
-
 function isProvider(value: unknown): value is Cip30Provider {
   return Boolean(value && typeof value === "object" && "enable" in value && typeof (value as Cip30Provider).enable === "function");
 }
@@ -30,7 +24,11 @@ export function WalletButton() {
   const [status, setStatus] = useState("idle");
 
   useEffect(() => {
-    const entries = Object.entries(window.cardano ?? {}).filter((entry): entry is [string, Cip30Provider] => isProvider(entry[1]));
+    // @meshsdk/core ships the canonical CIP-30 Window.cardano declaration.
+    // Cast through unknown here so this lightweight header component can stay
+    // provider-agnostic without redeclaring Window.cardano and conflicting with Mesh.
+    const cardano = window.cardano as unknown as Record<string, unknown> | undefined;
+    const entries = Object.entries(cardano ?? {}).filter((entry) => isProvider(entry[1])) as Array<[string, Cip30Provider]>;
     setProviders(entries);
     if (entries[0]) setSelected(entries[0][0]);
   }, []);
