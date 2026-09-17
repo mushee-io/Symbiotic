@@ -20,12 +20,17 @@ export function ensurePinnedAiken() {
     throw new Error(`Aiken v${EXPECTED_VERSION} is not installed or not on PATH. Install it with:\n${install}\nThen reopen the terminal and retry.`);
   }
 
-  const version = spawnSync(aikenPath, ["--version"], { encoding: "utf8" });
+  const version = spawnSync(aikenPath, ["--version"], { encoding: "utf8", shell: false });
   if (version.error) throw version.error;
   const versionText = `${version.stdout ?? ""} ${version.stderr ?? ""}`.trim();
   if (version.status !== 0 || !versionText.includes(EXPECTED_VERSION)) {
     throw new Error(`Wrong Aiken compiler. Required v${EXPECTED_VERSION}; found: ${versionText || "unknown"}`);
   }
+
+  // Preserve the resolved executable path for later deployment stages. Calling the
+  // executable directly (shell:false) is required on Windows when the user profile
+  // contains spaces, e.g. C:\\Users\\New User\\.aiken\\bin\\aiken.exe.
+  process.env.SYMBIOTIC_AIKEN_BIN = aikenPath;
 
   const binDir = resolve(process.cwd(), "node_modules", ".bin");
   mkdirSync(binDir, { recursive: true });
