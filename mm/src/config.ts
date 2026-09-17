@@ -6,9 +6,13 @@ function required(name: string) {
   return value;
 }
 
+const parsedNetworkId = Number(process.env.NETWORK_ID ?? "0");
+if (parsedNetworkId !== 0 && parsedNetworkId !== 1) throw new Error("NETWORK_ID must be 0 or 1");
+const networkId: 0 | 1 = parsedNetworkId;
+
 export const config = {
   network: process.env.NETWORK ?? "preprod",
-  networkId: Number(process.env.NETWORK_ID ?? "0"),
+  networkId,
   blockfrostProjectId: required("BLOCKFROST_PROJECT_ID"),
   deployerAddress: required("DEPLOYER_ADDRESS"),
   mnemonic: required("MM_MNEMONIC"),
