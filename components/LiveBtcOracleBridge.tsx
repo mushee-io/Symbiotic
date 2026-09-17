@@ -46,9 +46,52 @@ function setReactNumberInput(labelNeedle: string, value: number) {
   input.dispatchEvent(new Event("change", { bubbles: true }));
 }
 
+function styleChartOverlay() {
+  const chart = document.querySelector(".chart") as HTMLElement | null;
+  if (!chart) return null;
+
+  chart.style.alignItems = "flex-start";
+  chart.style.justifyContent = "flex-start";
+  chart.style.padding = "0";
+  chart.style.background = "#080808";
+
+  const status = chart.querySelector("p") as HTMLElement | null;
+  if (status) {
+    status.style.position = "absolute";
+    status.style.left = "20px";
+    status.style.top = "14px";
+    status.style.margin = "0";
+    status.style.zIndex = "3";
+  }
+
+  const price = chart.querySelector("strong") as HTMLElement | null;
+  if (price) {
+    price.style.position = "absolute";
+    price.style.left = "20px";
+    price.style.top = "34px";
+    price.style.margin = "0";
+    price.style.fontSize = "32px";
+    price.style.zIndex = "3";
+    price.style.textShadow = "0 2px 12px #080808";
+  }
+
+  const small = chart.querySelector("small") as HTMLElement | null;
+  if (small) {
+    small.style.position = "absolute";
+    small.style.left = "20px";
+    small.style.bottom = "12px";
+    small.style.zIndex = "3";
+    small.style.margin = "0";
+  }
+
+  return chart;
+}
+
 function updateVisibleTicker(payload: OraclePayload) {
   const price = Number(payload.price);
   if (!Number.isFinite(price) || price <= 0) return;
+
+  styleChartOverlay();
 
   const chartPrice = document.querySelector(".chart strong");
   if (chartPrice) {
@@ -81,10 +124,8 @@ function svgEl<K extends keyof SVGElementTagNameMap>(name: K) {
 }
 
 function renderCandles(rawCandles: Candle[], livePrice: number) {
-  const chart = document.querySelector(".chart") as HTMLElement | null;
+  const chart = styleChartOverlay();
   if (!chart || rawCandles.length < 2 || !Number.isFinite(livePrice) || livePrice <= 0) return;
-
-  chart.classList.add("live-candles-mounted");
 
   let svg = chart.querySelector("svg.live-btc-candles") as SVGSVGElement | null;
   if (!svg) {
@@ -93,6 +134,12 @@ function renderCandles(rawCandles: Candle[], livePrice: number) {
     svg.setAttribute("viewBox", "0 0 1000 320");
     svg.setAttribute("preserveAspectRatio", "none");
     svg.setAttribute("aria-label", "Live BTC USD one minute candlestick chart");
+    svg.style.position = "absolute";
+    svg.style.inset = "0";
+    svg.style.width = "100%";
+    svg.style.height = "100%";
+    svg.style.zIndex = "1";
+    svg.style.pointerEvents = "none";
     chart.prepend(svg);
   }
 
@@ -111,7 +158,6 @@ function renderCandles(rawCandles: Candle[], livePrice: number) {
   const range = hi - lo;
 
   const width = 1000;
-  const height = 320;
   const top = 18;
   const bottom = 298;
   const plotHeight = bottom - top;
