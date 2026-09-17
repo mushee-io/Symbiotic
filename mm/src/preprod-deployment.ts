@@ -143,8 +143,9 @@ function sha256(value: string | Buffer) {
 }
 
 function stablePlanRoot(plan: Omit<DeploymentPlan, "createdAt" | "planRoot" | "validators">, validators: AppliedValidator[]) {
+  const { observedWalletLovelace: _observedWalletLovelace, ...immutablePlan } = plan;
   const canonical = JSON.stringify({
-    ...plan,
+    ...immutablePlan,
     validators: validators.map(({ scriptCbor: _scriptCbor, ...validator }) => validator),
   });
   return sha256(canonical);
